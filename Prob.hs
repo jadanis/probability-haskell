@@ -125,11 +125,13 @@ getEvent :: (RandomGen g) => g -> Prob a -> a
 getEvent g (Prob xs) = head $ getEvents g (Prob xs) 1
 
 -- for use with IO provides the StdGen
+getEvents_ :: Prob a -> Int -> IO [a]
 getEvents_ (Prob xs) n = do
     gen <- getStdGen
     return $ getEvents gen (Prob xs) n
 
 -- for use with IO provides the StdGen
+getEvent_ :: Prob a -> IO a
 getEvent_ (Prob xs) = do
     gen <- getStdGen
     return $ getEvent gen (Prob xs)
