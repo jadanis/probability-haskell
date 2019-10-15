@@ -7,6 +7,7 @@ module Prob
 , die_12
 , die_20
 , makeDie
+, makeProb
 , coinToDie
 , Coin (Heads, Tails)
 , Die (Face)
@@ -61,6 +62,14 @@ joinProb :: (Eq a, Ord a) => Prob a -> Prob a
 joinProb (Prob xs) =
     Prob [(fst $ head ys, sum $ map snd ys) | ys <- groupProb . sortProb $ xs]
 
+makeProb :: [a] -> Prob a
+makeProb xs = Prob [(x, 1 % n) | x <- xs]
+    where n = fromIntegral $ length xs
+
+makeDie :: Int -> Prob Die
+makeDie 0 = Prob []
+makeDie n = makeProb [(Face m) | m <- [1..n]]
+
 -- From Learn You a Haskell
 data Coin = Heads | Tails deriving (Show, Eq, Ord)
 
@@ -77,7 +86,7 @@ data Die = Face Int deriving (Show, Read, Ord, Eq)
 
 -- standard six sided fair die
 die :: Prob Die
-die = Prob $ [(Face n,1%6)| n <- [1..6]]
+die = makeDie 6
 
 -- redundant to follow pattern below
 die_6 :: Prob Die
@@ -85,21 +94,17 @@ die_6 = die
 
 -- die_x for x sided fair die
 die_4 :: Prob Die
-die_4 = Prob $ [(Face n,1%4) | n <- [1..4]]
+die_4 = makeDie 4
 
 die_8 :: Prob Die
-die_8 = Prob $ [(Face n,1%8) | n <- [1..8]]
+die_8 = makeDie 8
 
 die_12 :: Prob Die
-die_12 = Prob $ [(Face n,1%12) | n <- [1..12]]
+die_12 = makeDie 12
 
 die_20 :: Prob Die
-die_20 = Prob $ [(Face n,1%20) | n <- [1..20]]
+die_20 = makeDie 20
 
--- method to create a die probability 
-makeDie :: Int -> Prob Die
-makeDie 0 = Prob []
-makeDie n = Prob $ [(Face m, 1 % toInteger n) | m <- [1..n]]
 
 -- to create a '2 sided die' from a Coin just in case
 coinToDie :: Coin -> Die
