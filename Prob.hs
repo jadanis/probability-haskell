@@ -13,10 +13,10 @@ module Prob
 , Die (Face)
 , joinProb
 , loadedCoin
-, getEvents
-, getEvent
-, getEvents_
-, getEvent_
+, Prob (..)
+, avg
+, var
+, flatten
 ) where
 
 import Data.Ratio
@@ -62,6 +62,39 @@ joinProb :: (Eq a, Ord a) => Prob a -> Prob a
 joinProb (Prob xs) =
     Prob [(fst $ head ys, sum $ map snd ys) | ys <- groupProb . sortProb $ xs]
 
+avg :: (Integral a) => Prob a -> Rational
+avg (Prob xs) = sum $ [ (toInteger x % 1)*p | (x,p) <- xs ]
+
+var :: (Integral a) => Prob a -> Rational
+var prob = m_2 - m ^ 2
+  where m = avg prob
+        m_2 = avg $ fmap (^ 2) prob
+
+{-
+median :: Fractional a => Prob a -> a
+median prob = median' $ sortBy compare $ getEventList prob
+
+median' :: Fractional a => [a] -> a
+median' xs =
+  case length xs of
+    0 -> 0
+    1 -> head xs
+    2 -> ((head xs) + (head $ tail xs)) / 2
+    _ -> median $ init $ tail xs
+-}
+-- mode ::
+mode prob = mode' $ groupBy (==) $ sortBy compare $ getEventList prob
+
+-- mode' ::
+mode' xs = 
+  head $ foldl my_f [] xs
+  where my_f ls ys =
+          case compare (length ls) (length ys) of
+            LT -> ys
+            GT -> ls
+            EQ -> ls -- not quite right fix
+
+
 makeProb :: [a] -> Prob a
 makeProb xs = Prob [(x, 1 % n) | x <- xs]
     where n = fromIntegral $ length xs
@@ -83,6 +116,26 @@ loadedCoin = Prob [(Heads,1%10),(Tails,9%10)]
 
 -- Added Die type
 data Die = Face Int deriving (Show, Read, Ord, Eq)
+
+instance Num Die where
+  (Face d1) + (Face d2) = Face (d1 + d2)
+  (Face d1) * (Face d2) = Face (d1 * d2)
+  abs (Face d) = Face (abs d)
+  signum (Face d) = Face (signum d)
+  fromInteger d = Face (fromInteger d)
+  negate (Face d) = Face (negate d)
+
+instance Real Die where
+  toRational (Face d) = toRational d
+
+instance Enum Die where
+  toEnum n = Face n
+  fromEnum (Face d) = d
+
+instance Integral Die where
+  quotRem (Face d1) (Face d2) = (Face r1, Face r2)
+    where (r1,r2) = quotRem d1 d2
+  toInteger (Face d) = toInteger d
 
 -- standard six sided fair die
 die :: Prob Die
@@ -117,17 +170,19 @@ getEventList (Prob xs) = let probs = [p | (x,p) <- xs]
                              ys = [(x,fromIntegral $ (numerator p)*(div n (denominator p))) | (x,p) <- xs ]
                           in join $ map (\(x,p) -> replicate p x) ys
 
+
+-- gets one random event given a RandomGen and Prob a
+getEvent :: (RandomGen g) => g -> Prob a -> (a,g)
+getEvent g (Prob xs) = (events !! n, ng)
+  where (n,ng) = next g
+        events = getEventList (Prob xs)
+
 -- using a RandomGen to create a random list of indeces of length n then map these onto
 -- the result of getEventList
 getEvents :: (RandomGen g) => g -> Prob a -> Int -> [a]
 getEvents _ _ 0 = []
-getEvents g (Prob xs) n = let events = getEventList (Prob xs)
-                              indcs = take n $ randomRs (1,length events) g :: [Int]
-                          in map (events !!) (map (\x -> x-1) indcs)
-
--- gets one random event given a RandomGen and Prob a
-getEvent :: (RandomGen g) => g -> Prob a -> a
-getEvent g (Prob xs) = head $ getEvents g (Prob xs) 1
+getEvents g prob n = f:(getEvents ng prob (n-1))
+  where (f,ng) = getEvent g prob
 
 -- for use with IO provides the StdGen
 getEvents_ :: Prob a -> Int -> IO [a]
