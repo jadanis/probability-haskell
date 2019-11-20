@@ -24,7 +24,7 @@ import Control.Monad
 import Data.Function (on)
 import Data.List (groupBy, sortBy)
 import Data.Ord (comparing)
-import System.Random
+--import System.Random
 
 -- From Learn You a Haskell
 newtype Prob a = Prob {getProb :: [(a,Rational)] } deriving (Show,Read)
@@ -70,7 +70,7 @@ var prob = m_2 - m ^ 2
   where m = avg prob
         m_2 = avg $ fmap (^ 2) prob
 
-{-
+
 median :: Fractional a => Prob a -> a
 median prob = median' $ sortBy compare $ getEventList prob
 
@@ -81,7 +81,7 @@ median' xs =
     1 -> head xs
     2 -> ((head xs) + (head $ tail xs)) / 2
     _ -> median $ init $ tail xs
--}
+
 -- mode ::
 mode prob = mode' $ groupBy (==) $ sortBy compare $ getEventList prob
 
@@ -92,7 +92,7 @@ mode' xs =
           case compare (length ls) (length ys) of
             LT -> ys
             GT -> ls
-            EQ -> ls -- not quite right fix
+            EQ -> replicate (length ls) (((head ls) + (head ys))/2)
 
 
 makeProb :: [a] -> Prob a
@@ -170,28 +170,3 @@ getEventList (Prob xs) = let probs = [p | (x,p) <- xs]
                              ys = [(x,fromIntegral $ (numerator p)*(div n (denominator p))) | (x,p) <- xs ]
                           in join $ map (\(x,p) -> replicate p x) ys
 
-
--- gets one random event given a RandomGen and Prob a
-getEvent :: (RandomGen g) => g -> Prob a -> (a,g)
-getEvent g (Prob xs) = (events !! n, ng)
-  where (n,ng) = next g
-        events = getEventList (Prob xs)
-
--- using a RandomGen to create a random list of indeces of length n then map these onto
--- the result of getEventList
-getEvents :: (RandomGen g) => g -> Prob a -> Int -> [a]
-getEvents _ _ 0 = []
-getEvents g prob n = f:(getEvents ng prob (n-1))
-  where (f,ng) = getEvent g prob
-
--- for use with IO provides the StdGen
-getEvents_ :: Prob a -> Int -> IO [a]
-getEvents_ (Prob xs) n = do
-    gen <- getStdGen
-    return $ getEvents gen (Prob xs) n
-
--- for use with IO provides the StdGen
-getEvent_ :: Prob a -> IO a
-getEvent_ (Prob xs) = do
-    gen <- getStdGen
-    return $ getEvent gen (Prob xs)
