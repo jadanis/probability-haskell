@@ -71,7 +71,7 @@ var prob = m_2 - m ^ 2
         m_2 = avg $ fmap (^ 2) prob
 
 
-median :: Fractional a => Prob a -> a
+median :: (Ord a,Fractional a) => Prob a -> a
 median prob = median' $ sortBy compare $ getEventList prob
 
 median' :: Fractional a => [a] -> a
@@ -80,7 +80,7 @@ median' xs =
     0 -> 0
     1 -> head xs
     2 -> ((head xs) + (head $ tail xs)) / 2
-    _ -> median $ init $ tail xs
+    _ -> median' $ init $ tail xs
 
 -- mode ::
 mode prob = mode' $ groupBy (==) $ sortBy compare $ getEventList prob
